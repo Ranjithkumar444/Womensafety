@@ -3,12 +3,18 @@ package com.womensafety.Womensafety.config;
 import com.womensafety.Womensafety.Service.CustomUserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import java.beans.Customizer;
 
 import static org.springframework.security.config.Customizer.withDefaults;
 
@@ -17,10 +23,12 @@ import static org.springframework.security.config.Customizer.withDefaults;
 public class SecurityConfig {
     private final CustomUserDetailsService userDetailsService;
     private final BCryptPasswordEncoder passwordEncoder;
+    private final JwtFilter jwtFilter;
 
-    public SecurityConfig(CustomUserDetailsService userDetailsService, BCryptPasswordEncoder passwordEncoder) {
+    public SecurityConfig(CustomUserDetailsService userDetailsService, BCryptPasswordEncoder passwordEncoder,JwtFilter jwtFilter) {
         this.userDetailsService = userDetailsService;
         this.passwordEncoder = passwordEncoder;
+        this.jwtFilter = jwtFilter;
     }
 
     @Bean
@@ -28,11 +36,13 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(requests -> requests
-                        .requestMatchers("/api/users/signup", "/api/users/login").permitAll()
+                        .requestMatchers("/api/users/signup", "/api/users/login", "/api/users/loginjwt").permitAll()
                         .anyRequest().authenticated()
                 )
                 .httpBasic(withDefaults())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+//                .oauth2Login(withDefaults());
 
         return http.build();
     }
@@ -43,5 +53,10 @@ public class SecurityConfig {
         provider.setPasswordEncoder(passwordEncoder);
         provider.setUserDetailsService(userDetailsService);
         return provider;
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
     }
 }

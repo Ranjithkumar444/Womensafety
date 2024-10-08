@@ -2,11 +2,14 @@ package com.womensafety.Womensafety.Controller;
 
 import com.womensafety.Womensafety.Model.LoginRequest;
 import com.womensafety.Womensafety.Model.User;
+import com.womensafety.Womensafety.Service.JWTservice;
 import com.womensafety.Womensafety.Service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,8 +22,14 @@ import java.util.Optional;
 public class UserController {
     private final UserService userService;
 
-    public UserController(UserService userService) {
+    private final JWTservice jwTservice;
+
+    private final AuthenticationManager authenticationManager;
+
+    public UserController(UserService userService,AuthenticationManager authenticationManager,JWTservice jwTservice) {
         this.userService = userService;
+        this.authenticationManager = authenticationManager;
+        this.jwTservice = jwTservice;
     }
 
     @Autowired
@@ -84,5 +93,21 @@ public class UserController {
         }
     }
 
+    @PostMapping("/loginjwt")
+    public String loginjwt(@RequestBody User user) {
+        Optional<User> userOpt = userService.findByUsername(user.getUsername());
+        if (userOpt.isPresent()) {
+            User existingUser = userOpt.get();
+            if (passwordEncoder.matches(user.getPassword(), existingUser.getPassword())) {
+                Authentication authentication = authenticationManager.authenticate(
+                        new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword())
+                );
+                if (authentication.isAuthenticated()) {
+                    return jwTservice.GenerateToken(user.getUsername());
+                }
+            }
+        }
+        return "failed";
+    }
 
 }
