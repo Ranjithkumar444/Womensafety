@@ -3,6 +3,7 @@ package com.womensafety.Womensafety.Service;
 import com.womensafety.Womensafety.Model.User;
 import com.womensafety.Womensafety.Repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -17,10 +18,13 @@ public class UserService implements CustomUserDetailsService {
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
 
+
+
     @Autowired
     public UserService(UserRepository userRepository, BCryptPasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+
     }
 
     @Override
@@ -54,5 +58,17 @@ public class UserService implements CustomUserDetailsService {
 
     public List<User> getUserList() {
         return userRepository.findAll();
+    }
+
+    public String authenticateUser(String username, String password) {
+        Optional<User> userOpt = userRepository.findByUsername(username);
+        if (userOpt.isPresent()) {
+            User existingUser = userOpt.get();
+            // Check if the passwords match
+            if (passwordEncoder.matches(password, existingUser.getPassword())) {
+                return "success";
+            }
+        }
+        return "failed";
     }
 }
